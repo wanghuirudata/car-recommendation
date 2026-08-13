@@ -6,8 +6,12 @@ __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 
-# 旧的 RandomForest 模型合计 1.2GB，不进构建上下文
-*.pkl
+# 旧的 RandomForest 模型合计 1.2GB，不进构建上下文。
+# 注意这里必须写 **/*.pkl 而不是 *.pkl：.dockerignore 用 Go 的
+# filepath.Match 语义，* 不跨越 /，所以 *.pkl 只匹配根目录下的文件，
+# model/rf_model_pipeline.pkl 会被原样打进镜像（实测多了 1.2GB）。
+# .gitignore 的 *.pkl 是递归匹配的，两者行为不同，容易踩。
+**/*.pkl
 !model/price_model.pkl
 
 # 分析产物，运行时用不到

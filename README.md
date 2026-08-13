@@ -203,7 +203,7 @@ deliberately: multiple workers would each hold their own copy of the dataset
 and model.
 
 Verified by running the image under `--memory=512m`, matching the smallest
-free tier: **178 MB, 35% of the cap**, all routes serving in under 50 ms. The
+free tier: **176 MB, 34% of the cap**, all routes serving in under 50 ms. The
 in-build retrain reproduces the held-out metrics exactly under Python 3.11
 (MAE £1,164 / MAPE 7.2% / R² 0.956), and the same input yields the same
 prediction as the local Python 3.9 model to the penny.
