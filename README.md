@@ -189,6 +189,7 @@ resident, so footprint was measured rather than assumed:
 |---|---|---|
 | Before | 293 MB | 48.8 MB |
 | After | 273 MB | **4.0 MB** |
+| **In the container** | **178 MB** | 4.0 MB |
 
 Two changes: string columns are cast to `category` (`Brand` has 9 distinct
 values, `image_url` 194 — as `object` each row held a separate Python string),
@@ -196,10 +197,16 @@ and the Dash app now reuses the DataFrame the Flask app already loaded instead
 of reading `vehicle.csv` a second time. Filtering on `/sales` got about 2×
 faster as a side effect.
 
-The remaining ~270 MB is mostly interpreter and library import overhead
-(pandas, scikit-learn, LightGBM, Dash). The container runs a **single process
-with 4 threads** deliberately: multiple workers would each hold their own copy
-of the dataset and model.
+The rest is interpreter and library import overhead (pandas, scikit-learn,
+LightGBM, Dash). The container runs a **single process with 4 threads**
+deliberately: multiple workers would each hold their own copy of the dataset
+and model.
+
+Verified by running the image under `--memory=512m`, matching the smallest
+free tier: **178 MB, 35% of the cap**, all routes serving in under 50 ms. The
+in-build retrain reproduces the held-out metrics exactly under Python 3.11
+(MAE £1,164 / MAPE 7.2% / R² 0.956), and the same input yields the same
+prediction as the local Python 3.9 model to the penny.
 
 ---
 
