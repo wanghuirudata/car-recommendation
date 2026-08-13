@@ -223,14 +223,34 @@ class VehicleAssistant:
     # ---------- 对外入口 ----------
 
     def reply(self, message, history=None):
-        """返回 {'reply': str, 'cards': [...], 'mode': 'llm'|'rules'}。"""
-        if self.llm_enabled:
-            try:
-                return self._reply_llm(message, history or [])
-            except Exception as e:
-                # LLM 不可用时不能让整个聊天挂掉，退回规则模式
-                print(f"LLM reply failed, falling back to rules: {e}")
-        return self._reply_rules(message)
+        """返回 {'reply', 'cards', 'mode', 'fallback_reason'}。
+
+        降级到规则模式时一定带上 fallback_reason。这一条是被实际踩坑逼出来的：
+        原本 mode='rules' 无法区分「没配 key」「包没装」「API 调用失败」三种
+        情况，三条路径静默汇合到同一个返回值，排查时只能靠猜。
+
+        降级本身保住了可用性，但如果不把原因暴露出来，它就只是把故障伪装
+        成了「效果不太好」—— 和这个项目里推荐系统那个 except 犯的是同一个错。
+        """
+        if not self.llm_enabled:
+            return self._with_reason(self._reply_rules(message), 'no_api_key')
+
+        try:
+            return self._reply_llm(message, history or [])
+        except ImportError as exc:
+            # Python 3 里 except 块结束后异常变量就被销毁了，在块内取出来
+            reason, detail = 'package_missing', str(exc)
+        except Exception as exc:
+            reason, detail = 'api_error', str(exc)
+
+        # 只用 ASCII：Windows 控制台默认 cp1252，打印非 ASCII 会二次抛错
+        print(f"assistant: LLM unavailable ({reason}: {detail}), using rules")
+        return self._with_reason(self._reply_rules(message), reason)
+
+    @staticmethod
+    def _with_reason(result, reason):
+        result['fallback_reason'] = reason
+        return result
 
     # ---------- LLM 模式 ----------
 
@@ -266,7 +286,8 @@ class VehicleAssistant:
             messages.append({'role': 'user', 'content': results})
 
         text = ''.join(b.text for b in response.content if b.type == 'text')
-        return {'reply': text.strip(), 'cards': cards[:MAX_RESULTS], 'mode': 'llm'}
+        return {'reply': text.strip(), 'cards': cards[:MAX_RESULTS],
+                'mode': 'llm', 'fallback_reason': None}
 
     # ---------- 规则模式 ----------
 
