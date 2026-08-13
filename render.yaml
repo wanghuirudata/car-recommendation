@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: ukcar
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /
+    envVars:
+      # Render 会注入 PORT，Dockerfile 的 CMD 直接读它
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

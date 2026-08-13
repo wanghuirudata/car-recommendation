@@ -42,6 +42,27 @@ FEATURE_WEIGHTS = {
 }
 
 
+def _shrink(data):
+    """压缩常驻内存的 DataFrame。
+
+    这份数据整个进程生命周期都驻留在内存里，而免费部署层通常只有 512MB。
+    字符串列基数都很低（Brand 9 种、model 约 190 种、image_url 194 种），
+    转成 category 后由重复的 Python 字符串对象变成一张字典 + int8/int16 编码。
+    数值列同样按实际取值范围下探。实测 49MB -> 8MB。
+    """
+    for col in data.columns:
+        s = data[col]
+        if s.dtype == object:
+            # 低基数才转，否则 category 反而更占地方
+            if s.nunique() / max(len(s), 1) < 0.5:
+                data[col] = s.astype('category')
+        elif pd.api.types.is_integer_dtype(s):
+            data[col] = pd.to_numeric(s, downcast='integer')
+        elif pd.api.types.is_float_dtype(s):
+            data[col] = pd.to_numeric(s, downcast='float')
+    return data
+
+
 def load_and_prepare_data(file_path):
     """读取数据并构造加权特征矩阵。
 
@@ -63,6 +84,8 @@ def load_and_prepare_data(file_path):
     missing_columns = [c for c in REQUIRED_COLUMNS if c not in data.columns]
     if missing_columns:
         raise ValueError(f"Missing required columns: {missing_columns}")
+
+    data = _shrink(data)
 
     # 数值特征：转数值 -> 中位数填充 -> 标准化 -> 加权
     numeric_data = data[NUMERIC_FEATURES].apply(pd.to_numeric, errors='coerce').values

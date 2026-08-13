@@ -297,7 +297,8 @@ def purchase():
 
 # 保留初始化部分
 def init_dashboard(app):
-    dash_app = create_dash_app(app)
+    # 传入已加载的 data，避免 Dash 再读一遍 CSV
+    dash_app = create_dash_app(app, data)
     return dash_app
 
 # 初始化 dashboard

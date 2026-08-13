@@ -1,3 +1,13 @@
+---
+title: UK Used Car Price Prediction
+emoji: 🚗
+colorFrom: blue
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # UK Used Car Price Prediction & Recommendation
 
 A Flask application over **107,343 UK used-car listings** that does three things:
@@ -145,6 +155,45 @@ Configuration is via environment variables — all optional for local use:
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | `admin` / `admin123` | Demo login |
 | `FLASK_DEBUG` | off | Set to `1` for local debugging |
 | `PORT` | 5000 | HTTP port |
+
+---
+
+## Deployment
+
+The image is platform-neutral: it reads `$PORT`, defaults to 7860, and serves
+through waitress. Build and run locally with:
+
+```bash
+docker build -t ukcar . && docker run --rm -p 7860:7860 ukcar
+```
+
+**Hugging Face Spaces** (Docker SDK) — the YAML front matter at the top of this
+file is the Space config; push this repo to a Space remote and it builds as-is.
+
+**Render** — `render.yaml` is a blueprint for a free-tier Docker web service.
+Note that the free plan sleeps after 15 minutes idle, so the first request after
+a quiet period takes roughly a minute.
+
+### Memory
+
+The free tiers are memory-constrained, and this process keeps the full dataset
+resident, so footprint was measured rather than assumed:
+
+| | RSS | DataFrame |
+|---|---|---|
+| Before | 293 MB | 48.8 MB |
+| After | 273 MB | **4.0 MB** |
+
+Two changes: string columns are cast to `category` (`Brand` has 9 distinct
+values, `image_url` 194 — as `object` each row held a separate Python string),
+and the Dash app now reuses the DataFrame the Flask app already loaded instead
+of reading `vehicle.csv` a second time. Filtering on `/sales` got about 2×
+faster as a side effect.
+
+The remaining ~270 MB is mostly interpreter and library import overhead
+(pandas, scikit-learn, LightGBM, Dash). The container runs a **single process
+with 4 threads** deliberately: multiple workers would each hold their own copy
+of the dataset and model.
 
 ---
 

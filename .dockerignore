@@ -1,0 +1,16 @@
+.git
+.gitignore
+.claude/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# 旧的 RandomForest 模型合计 1.2GB，不进构建上下文
+*.pkl
+!model/price_model.pkl
+
+# 分析产物，运行时用不到
+data/
+graphic/
+*.ipynb

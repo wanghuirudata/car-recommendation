@@ -4,7 +4,7 @@ import plotly.express as px
 import pandas as pd
 import plotly.graph_objects as go
 
-def create_dash_app(server):
+def create_dash_app(server, df=None):
     # 创建Dash应用
     dash_app = Dash(
         server=server,
@@ -14,8 +14,10 @@ def create_dash_app(server):
         ]
     )
 
-    # 读取车辆数据
-    df = pd.read_csv('vehicle.csv')
+    # 复用 app.py 已经加载好的 DataFrame。原来这里独立 read_csv 一次，
+    # 同一份 107k 行数据在进程里存了两份。
+    if df is None:
+        df = pd.read_csv('vehicle.csv')
 
     # 创建多个图表
     brand_count = df['Brand'].value_counts().head(10)
