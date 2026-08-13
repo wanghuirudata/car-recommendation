@@ -28,7 +28,13 @@ from model.recommendation import (get_better_value_alternatives,
                                   get_similar_vehicles)
 from model.regressor import FEATURE_COLUMNS, Model
 
-MODEL_ID = "claude-opus-5"
+# 选 Haiku 而不是 Opus。这个任务是意图识别 + 从 3 个工具里挑一个 + 把 JSON
+# 复述成一两句话 —— 没有多步推理、没有长上下文、没有复杂规划，正是小模型的
+# 目标场景。Opus 5 贵 5 倍，换不来可感知的效果。
+#
+# 注意：这是基于任务复杂度的判断，不是实测结论。若要变成实测，用同一组问题
+# 分别跑两个模型，检查是否认错工具或漏掉筛选条件。
+MODEL_ID = "claude-haiku-4-5"
 MAX_RESULTS = 5
 
 # 合理年份区间。数据集里有 3 行脏数据（Fiesta 年份 2060、两台 1970 年的

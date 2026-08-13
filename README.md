@@ -158,6 +158,17 @@ the model never sees the raw dataset. Without a key it falls back to a keyword
 and regex parser over the same tools. The fallback is the point: the demo has no
 external account to expire and no per-message cost, so it cannot go dark.
 
+**Why Haiku and not Opus.** The job is intent recognition, picking one of three
+tools, and restating a JSON result in a sentence or two — no multi-step
+reasoning, no long context, no planning. That is what the small model is for; the
+frontier model costs roughly 5× more for no difference a user would notice. This
+is the same call as choosing LightGBM over a neural network for a 107k-row
+tabular problem: take the one that is sufficient, and be able to say why.
+
+Note this is a judgement from the shape of the task, not a measurement. Turning
+it into one is cheap — run the same handful of queries through both models and
+check whether the smaller one ever picks the wrong tool or drops a filter.
+
 This replaced a third-party Chatbase embed. On that plan agents are deleted
 after 14 days of inactivity, and the embedded bot ID had indeed been reaped —
 the script loaded fine and the API returned 404, so the widget silently rendered
