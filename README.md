@@ -119,8 +119,18 @@ Deduplicating against the *whole* table pushes the third slot far away (a 2015
 Fiesta was matched with a 2019 £23,000 Puma). Truncating first keeps results both
 diverse and genuinely comparable.
 
-**Result:** 2.91 of 3 distinct models per query, p95 price delta £7,116,
-**17.5 ms/query** — down from 161 ms.
+**Result**, measured over the same 200 random seed vehicles by replaying the
+original ranking against the current one:
+
+| | distinct models (of 3) | median \|Δprice\| | p95 \|Δprice\| | ms/query |
+|---|---|---|---|---|
+| Before | 1.16 | £296 | £1,759 | 15.1 |
+| After | **2.91** | £1,602 | £7,116 | 19.9 |
+
+The £296 median is the clearest symptom of the original design: the three
+"recommendations" were the same car, relisted. The new numbers look worse on
+paper — larger price deltas — which is the point. Recommending a genuinely
+different vehicle *should* move the price.
 
 At 107k rows an exact scan is the right call. An ANN index (hnswlib/faiss) only
 starts paying for itself around 10⁶+ rows, and would add a dependency and an
