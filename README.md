@@ -243,7 +243,7 @@ here because the fixes are the more interesting part of the work.
 
 | Problem | Fix |
 |---|---|
-| `/sales` and `/vehicle/<id>` returned **500** — non-numeric columns (`model`, `image_url`) leaked into the similarity matrix, making it `object` dtype so `np.dot` raised `TypeError`; the fallback handler then crashed printing a non-ASCII message on a cp1252 console | Build the feature matrix explicitly from named columns as `float32`; keep all log messages ASCII |
+| Similarity silently degraded to **random** recommendations, and on some consoles to a **500**. See the note below. | Build the feature matrix explicitly from named columns as `float32`; keep all log messages ASCII |
 | Every prediction re-loaded the 874 MB pickle from disk (~0.8 s/request) | Lazy load once per process behind a double-checked lock (0.05 s cold, 0.01 s warm) |
 | Training used every CSV column, so `vehicle_id` / `model` / `image_url` were fed to the model — retraining crashed outright | Single `FEATURE_COLUMNS` constant shared by training and serving |
 | `/search` rendered a template that does not exist | Removed — `/sales` already covered it and nothing linked to it |
@@ -253,6 +253,37 @@ here because the fixes are the more interesting part of the work.
 | A 46 GB dask full-similarity matrix, ranked by *distance* in descending order (returning the least similar cars) | Deleted; single-vector scan replaces it |
 | Dash referenced `styles.css`; the file is `style.css` | Corrected |
 | Hardcoded secret key and admin password | Moved to environment variables |
+
+### How the similarity feature matrix decayed
+
+Worth writing down, because the code never changed — the world around it did,
+and the failure was invisible from the outside.
+
+`load_and_prepare_data` originally built its matrix by copying the whole
+DataFrame, one-hot encoding the categoricals, and dropping the originals. That
+works only while every surviving column is numeric. Two later changes broke
+that assumption:
+
+1. **The dataset gained display columns.** `model` and `image_url` were added
+   so listings could show a name and a photo. They are strings, they were never
+   dropped, and `.values` on a frame containing them yields `object` dtype.
+2. **pandas 2.0 changed `get_dummies` to return `bool`** instead of `uint8`.
+   Mixing `bool` with `int64` and `float64` is enough on its own to make
+   `.values` collapse to `object` — so even the pre-`model`/`image_url` schema
+   stops working on a modern pandas.
+
+Either one makes `np.dot` raise. The consequence depended on where it ran:
+
+| | Console encoding | Observed behaviour |
+|---|---|---|
+| Original 11-column data, pandas 1.x | any | Similarity worked; recommendations were near-duplicates (£296 median price delta) |
+| After the schema change | UTF-8 | `except` caught it, printed a message, returned **random** vehicles — the page rendered fine |
+| After the schema change | cp1252 | The `print` of a non-ASCII message *itself* raised `UnicodeEncodeError`, escaping the handler → **HTTP 500** |
+
+The fallback handler was the thing that turned a bad recommendation into an
+outage, and a non-ASCII log message was what decided which. That is why the
+matrix is now built from an explicit column list and cast to `float32`, and why
+every runtime message is ASCII.
 
 ## Known limitations & roadmap
 
