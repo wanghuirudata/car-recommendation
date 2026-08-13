@@ -9,7 +9,8 @@ from flask import (Flask, abort, flash, redirect, render_template, request,
                    session, url_for)
 
 from dashboard import create_dash_app
-from model.recommendation import get_similar_vehicles, load_and_prepare_data
+from model.recommendation import (get_better_value_alternatives,
+                                  get_similar_vehicles, load_and_prepare_data)
 from model.regressor import Model
 
 # 加载和处理数据
@@ -185,13 +186,17 @@ def vehicle_detail(vehicle_id):
     # 获取用户当前查看的车辆信息
     current_vehicle = data.loc[vehicle_id]
 
-    # 使用推荐函数获取当前车辆的相似车辆
+    # 两路召回：同类车 + 更划算的选择
     recommendations = get_similar_vehicles(vehicle_id, data, vehicle_features, top_n=3)
+    better_value = get_better_value_alternatives(vehicle_id, data, vehicle_features, top_n=3)
 
     # 将当前车辆 ID 存入会话
     session['last_viewed_vehicle_id'] = vehicle_id
 
-    return render_template('vehicle_detail.html', vehicle=current_vehicle, recommendations=recommendations)
+    return render_template('vehicle_detail.html',
+                           vehicle=current_vehicle,
+                           recommendations=recommendations,
+                           better_value=better_value)
 
 
 

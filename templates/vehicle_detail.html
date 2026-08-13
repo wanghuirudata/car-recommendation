@@ -88,10 +88,43 @@
         </div>
     </div>
 
+    <!-- Better Value Alternatives -->
+    {% if better_value is not none and not better_value.empty %}
+    <div class="similar-vehicles mt-5">
+        <h3 class="mb-1">Better Value Alternatives</h3>
+        <p class="text-muted mb-4">Similar spec, at least 5% cheaper than this listing.</p>
+        <div class="row">
+            {% for rec_vehicle in better_value.iterrows() %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-success">
+                    <img src="{{ rec_vehicle[1].image_url }}"
+                         class="card-img-top similar-vehicle-image"
+                         alt="{{ rec_vehicle[1].Brand }} {{ rec_vehicle[1].model }}"
+                         onerror="this.src='/static/default-car.jpg'">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ rec_vehicle[1].Brand }} {{ rec_vehicle[1].model }}</h5>
+                        <p class="card-text">
+                            <strong>Price:</strong> £{{ "{:,.2f}".format(rec_vehicle[1].price) }}
+                            <span class="badge bg-success">
+                                save £{{ "{:,.0f}".format(vehicle.price - rec_vehicle[1].price) }}
+                            </span><br>
+                            <strong>Year:</strong> {{ rec_vehicle[1].year }}<br>
+                            <strong>Mileage:</strong> {{ "{:,}".format(rec_vehicle[1].mileage) }} miles
+                        </p>
+                        <a href="{{ url_for('vehicle_detail', vehicle_id=rec_vehicle[0]) }}" class="btn btn-info">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Similar Vehicles -->
     {% if recommendations is not none and not recommendations.empty %}
     <div class="similar-vehicles mt-5">
-        <h3 class="mb-4">Similar Vehicles</h3>
+        <h3 class="mb-1">Similar Vehicles</h3>
+        <p class="text-muted mb-4">Comparable spec — price is not used as a similarity feature.</p>
         <div class="row">
             {% for rec_vehicle in recommendations.iterrows() %}
             <div class="col-md-4 mb-4">
