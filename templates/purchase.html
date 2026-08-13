@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Prediction Form</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .form-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            width: 500px;
+        }
+        h2 {
+            text-align: center;
+            color: #4c87af;
+        }
+        .form-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555555;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4c87af;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #4c87af;
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            text-align: center;
+            display: none;  /* 默认隐藏 */
+        }
+        
+        .result-container.show {
+            display: block;  /* 当有结果时显示 */
+        }
+        
+        .predicted-price {
+            font-size: 24px;
+            color: #4c87af;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .result-label {
+            color: #555555;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Car Prediction Form</h2>
+        <form method="POST">
+            <div class="form-group">
+                <div>
+                    <label for="year">Year:</label>
+                    <input type="number" id="year" name="year" required>
+                </div>
+                <div>
+                    <label for="engineSize">Engine Size:</label>
+                    <input type="number" id="engineSize" name="engineSize" step="0.1" required>
+                </div>
+                <div>
+                    <label for="mileage">Mileage:</label>
+                    <input type="number" id="mileage" name="mileage" required>
+                </div>
+                <div>
+                    <label for="tax">Tax:</label>
+                    <input type="number" id="tax" name="tax" required>
+                </div>
+                <div>
+                    <label for="mpg">MPG:</label>
+                    <input type="number" id="mpg" name="mpg" step="0.1" required>
+                </div>
+                <div>
+                    <label for="High_Performance">High Performance:</label>
+                    <select name="High_Performance" id="High_Performance" required>
+                        <option selected value>-- select an option --</option>
+                        <option value="1">Yes</option>
+                        <option value="0">No</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="Brand">Brand:</label>
+                    <select name="Brand" id="Brand" required>
+                        <option selected value>-- select an option --</option>
+                        <option value="Toyota">Toyota</option>
+                        <option value="Ford">Ford</option>
+                        <option value="Skoda">Skoda</option>
+                        <option value="BMW">BMW</option>
+                        <option value="Mercedes-Benz">Mercedes-Benz</option>
+                        <option value="Audi">Audi</option>
+                        <option value="Volkswagen">Volkswagen</option>
+                        <option value="Vauxhall-Opel">Vauxhall-Opel</option>
+                        <option value="Nissan">Nissan</option>
+                        <option value="Hyundai">Hyundai</option>
+                        <!-- More options can be added here -->
+                    </select>
+                </div>
+                <div>
+                    <label for="fuelType">Fuel Type:</label>
+                    <select name="fuelType" id="fuelType" required>
+                        <option selected value>-- select an option --</option>
+                        <option value="Petrol">Petrol</option>
+                        <option value="Diesel">Diesel</option>
+                        <option value="Electric">Electric</option>
+                        <option value="Hybrid">Hybrid</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="Car_Type">Car Type:</label>
+                    <select name="Car_Type" id="Car_Type" required>
+                        <option selected value>-- select an option --</option>
+                        <option value="SUV">SUV</option>
+                        <option value="Sedan">Sedan</option>
+                        <option value="Hatchback">Hatchback</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="transmission">Transmission:</label>
+                    <select name="transmission" id="transmission" required>
+                        <option selected value>-- select an option --</option>
+                        <option value="Manual">Manual</option>
+                        <option value="Automatic">Automatic</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit">Submit</button>
+        </form>
+        
+        <div class="result-container {% if predicted_price is defined %}show{% endif %}">
+            <div class="result-label">Predicted Car Price:</div>
+            <div class="predicted-price">
+                {% if predicted_price is defined %}
+                    £{{ "{:,.2f}".format(predicted_price) }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

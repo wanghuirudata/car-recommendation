@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Form Example</title>
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f4f4f9;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        color:  #4c8baf;
+        margin-bottom: 30px;
+      }
+
+      form {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+
+      input[type="number"],
+      select {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1em;
+      }
+
+      button {
+        width: 100%;
+        padding: 15px;
+        background-color: #4c8baf;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 1.2em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #4c8baf;
+      }
+
+      h2 {
+        text-align: center;
+        margin-top: 20px;
+        color: #b86090;
+      }
+
+      /* Add responsive design for mobile view */
+      @media (max-width: 600px) {
+        form {
+          padding: 15px;
+        }
+
+        button {
+          font-size: 1em;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Car Price Prediction</h1>
+    
+    <form method="POST"> 
+      <label for="year">Year:</label>
+      <input type="number" id="year" name="year" required>
+      
+      <label for="engineSize">Engine Size:</label>
+      <input type="number" id="engineSize" name="engineSize" step="0.1" required>
+      
+      <label for="mileage">Mileage:</label>
+      <input type="number" id="mileage" name="mileage" required>
+      
+      <label for="tax">Tax:</label>
+      <input type="number" id="tax" name="tax" required>
+      
+      <label for="mpg">MPG:</label>
+      <input type="number" id="mpg" name="mpg" step="0.1" required>
+      
+      <label for="High_Performance">High Performance:</label>
+      <select name="High_Performance" id="High_Performance" required>
+          <option selected value>-- select an option --</option>
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+      </select>
+      
+      <label for="Brand">Brand:</label>
+      <select name="Brand" id="Brand" required>
+          <option selected value>-- select an option --</option>
+          <!-- Add brand options as necessary -->
+          <option value="Toyota">Toyota</option>
+          <option value="Ford">Ford</option>
+          <!-- More options can be added here -->
+      </select>
+      
+      <label for="fuelType">Fuel Type:</label>
+      <select name="fuelType" id="fuelType" required>
+          <option selected value>-- select an option --</option>
+          <option value="Petrol">Petrol</option>
+          <option value="Diesel">Diesel</option>
+          <option value="Electric">Electric</option>
+          <option value="Hybrid">Hybrid</option>
+          <!-- More options can be added here -->
+      </select>
+      
+      <label for="Car_Type">Car Type:</label>
+      <select name="Car_Type" id="Car_Type" required>
+          <option selected value>-- select an option --</option>
+          <option value="SUV">SUV</option>
+          <option value="Sedan">Sedan</option>
+          <option value="Hatchback">Hatchback</option>
+          <!-- More options can be added here -->
+      </select>
+      
+      <label for="transmission">Transmission:</label>
+      <select name="transmission" id="transmission" required>
+          <option selected value>-- select an option --</option>
+          <option value="Manual">Manual</option>
+          <option value="Automatic">Automatic</option>
+          <!-- More options can be added here -->
+      </select>
+      
+      <button type="submit">Submit</button>
+  </form>
+  
+    
+    {% if prediction %}
+      <h2>Prediction Result: {{ prediction }}</h2>       
+    {% endif %}
+  </body>
+</html>

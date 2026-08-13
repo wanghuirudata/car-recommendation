@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <!-- Search Form -->
+    <div class="search-section">
+        <h3>Find Vehicles</h3>
+        <form method="GET" action="{{ url_for('sales') }}" class="search-form">
+            <div class="form-group">
+                <input type="text" name="query" value="{{ search_params.query }}" placeholder="Search vehicles...">
+                
+                <select name="brand">
+                    <option value="">Select Brand</option>
+                    {% for brand in available_brands %}
+                    <option value="{{ brand }}" {% if brand == search_params.brand %}selected{% endif %}>
+                        {{ brand }}
+                    </option>
+                    {% endfor %}
+                </select>
+                
+                <input type="number" name="price_min" value="{{ search_params.price_min }}" placeholder="Min Price">
+                <input type="number" name="price_max" value="{{ search_params.price_max }}" placeholder="Max Price">
+                <input type="number" name="year_min" value="{{ search_params.year_min }}" placeholder="Min Year">
+                
+                <select name="sort_by">
+                    <option value="price_asc" {% if search_params.sort_by == 'price_asc' %}selected{% endif %}>Price (Low to High)</option>
+                    <option value="price_desc" {% if search_params.sort_by == 'price_desc' %}selected{% endif %}>Price (High to Low)</option>
+                    <option value="year" {% if search_params.sort_by == 'year' %}selected{% endif %}>Newest First</option>
+                </select>
+                
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Search Results -->
+    {% if search_results is not none %}
+    <div class="search-results">
+        <h3>Search Results</h3>
+        <div class="vehicle-grid">
+            {% for vehicle in search_results.itertuples() %}
+            <div class="vehicle-card">
+                <h4>{{ vehicle.Brand }} {{ vehicle.model }}</h4>
+                <p>Year: {{ vehicle.year }}</p>
+                <p>Price: £{{ vehicle.price }}</p>
+                <img src="{{ vehicle.image_url }}" class="card-img-top" alt="{{ vehicle.Brand }}" 
+                             onerror="this.src='/static/default-car.jpg'">
+                <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle.Index) }}" class="btn btn-info">View Details</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 添加分页导航 -->
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <!-- 上一页按钮 -->
+                <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('sales', page=current_page-1, **search_params) }}" tabindex="-1">Previous</a>
+                </li>
+                
+                <!-- 页码按钮 -->
+                {% for page_num in range(1, total_pages + 1) %}
+                    {% if page_num == 1 or page_num == total_pages or (page_num >= current_page - 2 and page_num <= current_page + 2) %}
+                        {% if page_num == current_page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('sales', page=page_num, **search_params) }}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% elif page_num == current_page - 3 or page_num == current_page + 3 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                <!-- 下一页按钮 -->
+                <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('sales', page=current_page+1, **search_params) }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    <!-- Recommended Vehicles -->
+    <div class="recommendations-section">
+        <h3>Recommended Vehicles</h3>
+        <div class="vehicle-grid">
+            {% for vehicle in recommendations.iterrows() %}
+            <div class="vehicle-card">
+                <h4>{{ vehicle[1].Brand }} {{ vehicle[1].model }}</h4>
+                <p>Year: {{ vehicle[1].year }}</p>
+                <p>Price: £{{ vehicle[1].price }}</p>
+                <img src="{{ vehicle[1].image_url }}" class="card-img-top" alt="{{ vehicle[1].Brand }}" 
+                             onerror="this.src='/static/default-car.jpg'">
+                <a href="{{ url_for('vehicle_detail', vehicle_id=vehicle[0]) }}" class="btn btn-info">View Details</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 添加分页样式 */
+    .pagination {
+        margin-top: 20px;
+    }
+    
+    .page-link {
+        color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .page-item.active .page-link {
+        background-color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .page-link:hover {
+        color: #138496;
+        background-color: #e9ecef;
+        border-color: #138496;
+    }
+</style>
+{% endblock %}

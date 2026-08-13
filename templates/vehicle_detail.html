@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{{ url_for('sales') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <!-- Vehicle Detail Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <!-- Vehicle Image Section -->
+                <div class="col-12 mb-4">
+                    <img src="{{ vehicle.image_url }}" 
+                         class="img-fluid rounded vehicle-detail-image" 
+                         alt="{{ vehicle.Brand }} {{ vehicle.Car_Type }}"
+                         onerror="this.src='/static/default-car.jpg'">
+                </div>
+                
+                <!-- Left: Main Information -->
+                <div class="col-md-8">
+                    <h2 class="card-title mb-4">{{ vehicle.Brand }} {{ vehicle.model }}</h2>
+                    <div class="price-tag mb-4">
+                        <h3 class="text-primary">£{{ "{:,.2f}".format(vehicle.price) }}</h3>
+                    </div>
+                    
+                    <!-- Key Features -->
+                    <div class="key-features mb-4">
+                        <div class="row">
+                            <div class="col-6 col-md-4 mb-3">
+                                <div class="feature-item">
+                                    <strong>Year</strong>
+                                    <p>{{ vehicle.year }}</p>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 mb-3">
+                                <div class="feature-item">
+                                    <strong>Mileage</strong>
+                                    <p>{{ "{:,}".format(vehicle.mileage) }} miles</p>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 mb-3">
+                                <div class="feature-item">
+                                    <strong>Transmission</strong>
+                                    <p>{{ vehicle.transmission }}</p>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 mb-3">
+                                <div class="feature-item">
+                                    <strong>Fuel Type</strong>
+                                    <p>{{ vehicle.fuelType }}</p>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 mb-3">
+                                <div class="feature-item">
+                                    <strong>Engine Size</strong>
+                                    <p>{{ vehicle.engineSize }}L</p>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4 mb-3">
+                                <div class="feature-item">
+                                    <strong>MPG</strong>
+                                    <p>{{ vehicle.mpg }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Contact Info and Action Buttons -->
+                <div class="col-md-4">
+                    <div class="contact-card p-3 bg-light rounded">
+                        <h4 class="mb-3">Interested?</h4>
+                        {% if 'username' in session %}
+                            <button class="btn btn-primary btn-lg w-100 mb-2" onclick="contactSeller()">Contact Seller</button>
+                            <button class="btn btn-outline-primary w-100 mb-2" onclick="addToFavorites({{ vehicle.Index }})">
+                                Add to Favorites
+                            </button>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg w-100 mb-2">Login to Contact Seller</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Similar Vehicles -->
+    {% if recommendations is not none and not recommendations.empty %}
+    <div class="similar-vehicles mt-5">
+        <h3 class="mb-4">Similar Vehicles</h3>
+        <div class="row">
+            {% for rec_vehicle in recommendations.iterrows() %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <img src="{{ rec_vehicle[1].image_url }}" 
+                         class="card-img-top similar-vehicle-image" 
+                         alt="{{ rec_vehicle[1].Brand }} {{ rec_vehicle[1].model }}"
+                         onerror="this.src='/static/default-car.jpg'">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ rec_vehicle[1].Brand }} {{ rec_vehicle[1].model }}</h5>
+                        <p class="card-text">
+                            <strong>Price:</strong> £{{ "{:,.2f}".format(rec_vehicle[1].price) }}<br>
+                            <strong>Year:</strong> {{ rec_vehicle[1].year }}<br>
+                            <strong>Mileage:</strong> {{ "{:,}".format(rec_vehicle[1].mileage) }} miles
+                        </p>
+                        <a href="{{ url_for('vehicle_detail', vehicle_id=rec_vehicle[0]) }}" class="btn btn-info">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Styles and Scripts remain the same -->
+<style>
+    .feature-item {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        height: 100%;
+    }
+    
+    .feature-item strong {
+        display: block;
+        color: #6c757d;
+        font-size: 0.9em;
+        margin-bottom: 5px;
+    }
+    
+    .feature-item p {
+        margin: 0;
+        font-size: 1.1em;
+        color: #212529;
+    }
+    
+    .price-tag {
+        padding: 10px 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        display: inline-block;
+    }
+    
+    .contact-card {
+        border: 1px solid #dee2e6;
+    }
+    
+    .vehicle-detail-image {
+        width: 100%;
+        max-height: 500px;
+        object-fit: cover;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .similar-vehicle-image {
+        height: 200px;
+        object-fit: cover;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+</style>
+
+<script>
+function contactSeller() {
+    alert('Contact feature coming soon!');
+}
+
+function addToFavorites(vehicleId) {
+    fetch(`/favorite/${vehicleId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Added to favorites!');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to add to favorites. Please try again later.');
+    });
+}
+</script>
+{% endblock %}

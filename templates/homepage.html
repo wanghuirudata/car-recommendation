@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Churners Prediction</title>
+    <style>
+      body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f4f4f9;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+
+      .container {
+        position: relative;
+        max-width: 80%; /* Make the container larger */
+        width: 50%; /* Adjust the width for a bigger image */
+        margin: 0 auto;
+      }
+
+      img {
+        width: 100%;
+        height: auto;
+        border-radius: 15px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .overlay {
+        position: absolute;
+        top: 50%; /* Place the overlay in the center vertically */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 50%; /* Make the overlay smaller */
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.5); /* Semi-transparent */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-radius: 15px;
+      }
+
+      h1 {
+        color: white;
+        font-size: 2em;
+        text-align: center;
+        margin: 0;
+        padding-bottom: 20px;
+      }
+
+      a {
+        text-decoration: none;
+        font-size: 1.2em;
+        color: white;
+        background-color: #4c7aaf;
+        padding: 10px 20px;
+        border-radius: 25px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease;
+      }
+
+      a:hover {
+        background-color: #45a049;
+      }
+
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 1.8em;
+        }
+
+        a {
+          font-size: 1em;
+          padding: 8px 16px;
+        }
+
+        .overlay {
+          width: 70%; /* Adjust the overlay for smaller screens */
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img src="{{ url_for('static', filename='assets/BC_hp.webp') }}" alt="Bank Churners Image">
+      <div class="overlay">
+        <h1>Bienvenue Pour La Prédiction de Bank</h1>
+        <a href="/form">Prédire si le client vas rester !</a>
+      </div>
+    </div>
+  </body>
+</html>

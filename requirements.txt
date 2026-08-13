@@ -1,0 +1,15 @@
+# Web
+Flask==3.0.3
+
+# Data / modelling
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.1
+joblib==1.4.2
+
+# BI dashboard
+dash==2.18.1
+plotly==5.24.1
+
+# WSGI server (production; Windows-friendly alternative to gunicorn)
+waitress==3.0.0

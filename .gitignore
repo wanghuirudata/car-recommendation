@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Trained models — 体积过大（rf_model_pipeline.pkl 874MB），用 train_model.py 重新生成
+*.pkl
+
+# 重复 / 中间数据集（根目录的 vehicle.csv 是唯一需要提交的数据源）
+data/vehicle.csv
+model/vehicle.csv
+
+# Flask / env
+.env
+instance/
+templates/cache/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/

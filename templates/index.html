@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div id="carouselExample" class="carousel slide shadow" data-bs-ride="carousel">
+        <div class="carousel-inner rounded">
+            {% for image in images %}
+                <div class="carousel-item {% if loop.index == 1 %}active{% endif %}">
+                    <img src="{{ image }}" class="d-block w-100" alt="Image {{ loop.index }}" style="height: 500px; object-fit: cover;">
+                </div>
+            {% endfor %}
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+    <div class="text-center mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-4 mb-3">
+                <a href="{{ url_for('login') }}" class="btn btn-custom btn-lg w-100 shadow-sm hover-effect">
+                    <i class="fas fa-user-shield me-2"></i>Admin Dashboard
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="{{ url_for('purchase') }}" class="btn btn-custom btn-lg w-100 shadow-sm hover-effect">
+                    <i class="fas fa-dollar-sign me-2"></i>You Want to Sell
+                </a>
+            </div>
+            <div class="col-md-4 mb-3">
+                <a href="{{ url_for('sales') }}" class="btn btn-custom btn-lg w-100 shadow-sm hover-effect">
+                    <i class="fas fa-shopping-cart me-2"></i>You Want to Buy
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加 Font Awesome 图标 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}
+
+{% block styles %}
+<style>
+    .carousel {
+        margin-bottom: 2rem;
+    }
+    
+    .carousel-inner {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn {
+        padding: 15px 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .hover-effect:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .btn-custom {
+        background-color: #4361ee !important;
+        border-color: #4361ee !important;
+        color: rgb(255, 255, 255) !important;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+    
+    .btn-custom:hover {
+        background-color: #3651d4 !important;
+        border-color: #3651d4 !important;
+        color: white !important;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
