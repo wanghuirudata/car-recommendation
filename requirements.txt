@@ -12,5 +12,9 @@ joblib==1.4.2
 dash==2.18.1
 plotly==5.24.1
 
+# 购车助手的 LLM 模式。未安装或未设置 ANTHROPIC_API_KEY 时，
+# 助手自动降级为规则解析，功能仍可用。
+anthropic==0.75.0
+
 # WSGI server (production; Windows-friendly alternative to gunicorn)
 waitress==3.0.0

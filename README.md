@@ -27,6 +27,7 @@ exposes the market data through an interactive BI dashboard.
 | `/vehicle/<id>` | Listing detail, plus two recommendation tracks (see below) |
 | `/dashapp/` | Plotly Dash dashboard: brand mix, price distribution, price-by-year |
 | `/login`, `/dashboard` | Session-based admin area |
+| `/api/chat` | Assistant that answers questions against the dataset (see below) |
 
 ## Architecture
 
@@ -138,6 +139,44 @@ index-rebuild step for no current gain.
 
 ---
 
+## Assistant
+
+A chat widget that answers questions against the dataset rather than from a
+language model's memory — "automatic BMW under £20k", "what's a 2018 Fiesta with
+30k miles worth", "anything similar but cheaper". The three existing capabilities
+are exposed as tools:
+
+| Tool | Backed by |
+|---|---|
+| `search_vehicles` | Filter over the in-memory DataFrame |
+| `estimate_price` | The LightGBM model above |
+| `find_alternatives` | The recommender above |
+
+**Two modes, one implementation.** With `ANTHROPIC_API_KEY` set, Claude decides
+which tool to call and how to phrase the answer; tools still execute locally, so
+the model never sees the raw dataset. Without a key it falls back to a keyword
+and regex parser over the same tools. The fallback is the point: the demo has no
+external account to expire and no per-message cost, so it cannot go dark.
+
+This replaced a third-party Chatbase embed. On that plan agents are deleted
+after 14 days of inactivity, and the embedded bot ID had indeed been reaped —
+the script loaded fine and the API returned 404, so the widget silently rendered
+nothing. A `<script>` tag also demonstrates nothing; tool-calling over your own
+data does.
+
+Two behaviours worth noting, both found by testing rather than by design:
+
+- Search sorts by **newest, then lowest mileage** — not by price ascending.
+  "Under £15,000" is a budget ceiling, not a request for the cheapest thing in
+  the dataset; sorting by price put a 2003 Focus with 177,000 miles at the top.
+- Results are filtered to plausible years (1990–2025). Three rows carry
+  impossible values — a Fiesta listed as 2060 and two 1970 cars, one of them a
+  Zafira, a model launched in 1999. Three rows in 107,343 do not affect the
+  model, but "newest first" put them on screen immediately. They are filtered at
+  the presentation layer, leaving the dataset and every measured metric intact.
+
+---
+
 ## Quick start
 
 ```bash
@@ -163,6 +202,7 @@ Configuration is via environment variables — all optional for local use:
 |---|---|---|
 | `SECRET_KEY` | random per process | Flask session signing |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | `admin` / `admin123` | Demo login |
+| `ANTHROPIC_API_KEY` | unset | Enables the assistant's LLM mode; without it the rule-based fallback runs |
 | `FLASK_DEBUG` | off | Set to `1` for local debugging |
 | `PORT` | 5000 | HTTP port |
 

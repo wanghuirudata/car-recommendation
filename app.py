@@ -5,10 +5,11 @@ from functools import wraps
 
 import numpy as np
 import pandas as pd
-from flask import (Flask, abort, flash, redirect, render_template, request,
-                   session, url_for)
+from flask import (Flask, abort, flash, jsonify, redirect, render_template,
+                   request, session, url_for)
 
 from dashboard import create_dash_app
+from model.assistant import VehicleAssistant
 from model.recommendation import (get_better_value_alternatives,
                                   get_similar_vehicles, load_and_prepare_data)
 from model.regressor import Model
@@ -22,9 +23,39 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or os.urandom(24).hex()
 
 
-# 说明：原来这里有一个 /chatbot 路由，调用的是 request.post()（Flask 的请求对象，
-# 并没有 .post 方法），必然 500。前端 base.html 走的是 Chatbase 的浏览器端 embed
-# 脚本，根本不经过后端，所以该路由是死代码，已移除。
+# 购车助手。原来这里接的是 Chatbase 的浏览器端 embed，免费层 bot 闲置 14 天
+# 会被删除（实测那个 bot 已返回 404），且一个 script 标签体现不出任何设计。
+# 改成自建：工具调用直接复用本项目的搜索 / 估价 / 推荐三块能力。
+assistant = VehicleAssistant(data, vehicle_features)
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    payload = request.get_json(silent=True) or {}
+    message = (payload.get('message') or '').strip()
+    if not message:
+        return jsonify({'error': 'message is required'}), 400
+    if len(message) > 1000:
+        return jsonify({'error': 'message too long'}), 400
+
+    history = session.get('chat_history', [])
+    result = assistant.reply(message, history)
+
+    # 只在 session 里保留纯文本往返，且限制长度：
+    # cookie session 有 4KB 上限，塞工具调用块会直接溢出
+    history = (history + [
+        {'role': 'user', 'content': message},
+        {'role': 'assistant', 'content': result['reply'] or '(no text)'},
+    ])[-6:]
+    session['chat_history'] = history
+
+    return jsonify(result)
+
+
+@app.route('/api/chat/reset', methods=['POST'])
+def chat_reset():
+    session.pop('chat_history', None)
+    return jsonify({'status': 'ok'})
 
 
 # 添加登录要求装饰器
