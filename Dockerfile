@@ -13,6 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# 在容器内重训模型。仓库里那份 price_model.pkl 是 Python 3.9 生成的，
+# 而镜像是 3.11；与其赌跨版本反序列化没问题，不如让模型由将要加载它的
+# 那个解释器自己产出。顺带保证训练流程是可复现的。
+RUN python train_model.py
+
 # Hugging Face Spaces 默认 7860；Render / Railway 会注入 PORT
 ENV PORT=7860
 EXPOSE 7860

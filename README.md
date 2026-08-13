@@ -161,7 +161,13 @@ Configuration is via environment variables — all optional for local use:
 ## Deployment
 
 The image is platform-neutral: it reads `$PORT`, defaults to 7860, and serves
-through waitress. Build and run locally with:
+through waitress. It also **retrains the model during the build** rather than
+shipping the committed pickle: the artefact in the repo was produced by Python
+3.9 and the image runs 3.11, and regenerating it under the interpreter that will
+load it removes a whole class of version-skew failures — while proving the
+training pipeline is reproducible from the raw CSV.
+
+Build and run locally with:
 
 ```bash
 docker build -t ukcar . && docker run --rm -p 7860:7860 ukcar
