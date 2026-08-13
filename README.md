@@ -165,9 +165,19 @@ frontier model costs roughly 5× more for no difference a user would notice. Thi
 is the same call as choosing LightGBM over a neural network for a 107k-row
 tabular problem: take the one that is sufficient, and be able to say why.
 
-Note this is a judgement from the shape of the task, not a measurement. Turning
-it into one is cheap — run the same handful of queries through both models and
-check whether the smaller one ever picks the wrong tool or drops a filter.
+Spot-checked against the live API on queries covering all three tools, in both
+English and Chinese:
+
+| Query | Tool chosen | Result |
+|---|---|---|
+| "automatic BMW under 20k" | `search_vehicles` | 1,934 matches, correct filters |
+| "2018 年的福特嘉年华跑了 3 万英里值多少钱" | `estimate_price` | £12,899, quoted with the model's ~7% error band |
+| "有没有配置差不多但更便宜的？车辆 id 是 50000" | `find_alternatives` | Three cheaper same-year Mercedes, £2.5k–3.5k below |
+| "family car, 5 seats, diesel, budget 18000, automatic" | `search_vehicles` | Correctly mapped an under-specified brief onto four filters |
+
+Right tool every time, filters intact, and it answered in the language it was
+asked in. This is a spot check, not a benchmark against the larger model — but
+it is enough to show the small model is sufficient here, which was the claim.
 
 This replaced a third-party Chatbase embed. On that plan agents are deleted
 after 14 days of inactivity, and the embedded bot ID had indeed been reaped —
