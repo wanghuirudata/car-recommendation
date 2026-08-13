@@ -5,6 +5,7 @@ Flask==3.0.3
 pandas==2.2.2
 numpy==1.26.4
 scikit-learn==1.5.1
+lightgbm==4.6.0
 joblib==1.4.2
 
 # BI dashboard

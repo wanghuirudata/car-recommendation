@@ -6,8 +6,10 @@ __pycache__/
 venv/
 .ipynb_checkpoints/
 
-# Trained models — 体积过大（rf_model_pipeline.pkl 874MB），用 train_model.py 重新生成
+# 旧的 RandomForest 模型体积过大（874MB / 323MB），不入库
 *.pkl
+# 新的 LightGBM 模型只有 1.6MB，直接提交，clone 下来即可运行
+!model/price_model.pkl
 
 # 重复 / 中间数据集（根目录的 vehicle.csv 是唯一需要提交的数据源）
 data/vehicle.csv
