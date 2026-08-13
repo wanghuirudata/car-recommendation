@@ -158,6 +158,19 @@ the model never sees the raw dataset. Without a key it falls back to a keyword
 and regex parser over the same tools. The fallback is the point: the demo has no
 external account to expire and no per-message cost, so it cannot go dark.
 
+**The fallback reports why it fired.** `/api/chat` returns `fallback_reason` —
+`no_api_key`, `package_missing`, or `api_error`, and `null` on the LLM path. This
+was added after the fallback cost real debugging time: `mode: "rules"` said the
+assistant had degraded but not what caused it, and three distinct failures
+converged silently on one response. The actual cause was a missing dependency,
+indistinguishable from the outside from an unset key.
+
+That is the failure mode of graceful degradation in general, and this repo has
+the same bug twice: the recommender's `except` clause returned random vehicles,
+turning an outage into "the recommendations aren't very good" (see *How the
+similarity feature matrix decayed*). A fallback that hides its own reason isn't
+resilience — it's a fault wearing a disguise.
+
 **This is function calling, not RAG.** The distinction matters because the data
 decides it. RAG retrieves unstructured *text* by embedding a query and the corpus
 into the same vector space and taking the nearest chunks. This dataset is a
