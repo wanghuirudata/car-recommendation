@@ -158,6 +158,23 @@ the model never sees the raw dataset. Without a key it falls back to a keyword
 and regex parser over the same tools. The fallback is the point: the demo has no
 external account to expire and no per-message cost, so it cannot go dark.
 
+**This is function calling, not RAG.** The distinction matters because the data
+decides it. RAG retrieves unstructured *text* by embedding a query and the corpus
+into the same vector space and taking the nearest chunks. This dataset is a
+107,343-row table, and "automatic diesel SUV under £20,000" is a set of exact
+predicates — `transmission = Automatic`, `price <= 20000` — not a fuzzy match.
+Semantic similarity is the wrong instrument for a numeric bound: it would happily
+return a £26,000 car for being *about* that price. So the model's job here is to
+translate intent into typed arguments, and the query itself runs as ordinary
+code.
+
+Vector retrieval does appear in this project — in the recommender, as weighted
+nearest-neighbour search over a 107,343 × 30 feature matrix. That is the same
+mechanism RAG's retrieval half uses, over hand-designed and hand-weighted
+features rather than learned text embeddings. RAG would be the right choice here
+only if the listings carried free text — condition notes, reviews, spec sheets —
+and they don't.
+
 **Why Haiku and not Opus.** The job is intent recognition, picking one of three
 tools, and restating a JSON result in a sentence or two — no multi-step
 reasoning, no long context, no planning. That is what the small model is for; the
