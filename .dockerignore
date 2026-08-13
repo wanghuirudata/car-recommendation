@@ -14,6 +14,9 @@ __pycache__/
 **/*.pkl
 !model/price_model.pkl
 
+# 解压后的副本；镜像里只需要 vehicle.csv.gz
+/vehicle.csv
+
 # 分析产物，运行时用不到
 data/
 graphic/

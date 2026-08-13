@@ -14,7 +14,7 @@ from model.recommendation import (get_better_value_alternatives,
 from model.regressor import Model
 
 # 加载和处理数据
-data, vehicle_features = load_and_prepare_data("vehicle.csv")
+data, vehicle_features = load_and_prepare_data("vehicle.csv.gz")
 data['vehicle_id'] = data.index
 
 app = Flask(__name__)

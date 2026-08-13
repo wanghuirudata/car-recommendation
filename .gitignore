@@ -11,7 +11,9 @@ venv/
 # 新的 LightGBM 模型只有 1.6MB，直接提交，clone 下来即可运行
 !model/price_model.pkl
 
-# 重复 / 中间数据集（根目录的 vehicle.csv 是唯一需要提交的数据源）
+# 数据源以 vehicle.csv.gz 的形式入库（11.9MB -> 1.2MB，pandas 直接读）。
+# 解压后的副本和各处重复数据集都不提交。
+/vehicle.csv
 data/vehicle.csv
 model/vehicle.csv
 

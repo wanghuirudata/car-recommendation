@@ -36,7 +36,7 @@ flowchart LR
     F --> R[recommendation.py<br/>weighted kNN over<br/>107k x 30 feature matrix]
     F --> P[regressor.py<br/>LightGBM + log1p<br/>loaded once per process]
     F --> D[dashboard.py<br/>Plotly Dash at /dashapp/]
-    R --> C[(vehicle.csv)]
+    R --> C[(vehicle.csv.gz)]
     P --> M[(price_model.pkl<br/>1.6 MB)]
     D --> C
 ```
@@ -194,7 +194,7 @@ resident, so footprint was measured rather than assumed:
 Two changes: string columns are cast to `category` (`Brand` has 9 distinct
 values, `image_url` 194 — as `object` each row held a separate Python string),
 and the Dash app now reuses the DataFrame the Flask app already loaded instead
-of reading `vehicle.csv` a second time. Filtering on `/sales` got about 2×
+of reading the dataset a second time. Filtering on `/sales` got about 2×
 faster as a side effect.
 
 The rest is interpreter and library import overhead (pandas, scikit-learn,
@@ -220,7 +220,7 @@ model/regressor.py        Price model: pipeline, log1p target, single load
 model/recommendation.py   Feature matrix + two recommendation tracks
 model/car-uk.ipynb        EDA and modelling notebook
 templates/, static/       Jinja templates and assets
-vehicle.csv               107,343 listings
+vehicle.csv.gz            107,343 listings (gzipped; pandas reads it directly)
 graphic/                  EDA figures from the notebook
 ```
 

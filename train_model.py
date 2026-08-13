@@ -25,7 +25,7 @@ from sklearn.compose import TransformedTargetRegressor
 from model.regressor import (FEATURE_COLUMNS, MODEL_PATH, TARGET, Model,
                              build_model, build_preprocessor)
 
-DATA_PATH = 'vehicle.csv'
+DATA_PATH = 'vehicle.csv.gz'
 RANDOM_STATE = 42
 
 

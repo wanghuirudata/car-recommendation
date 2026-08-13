@@ -17,7 +17,7 @@ def create_dash_app(server, df=None):
     # 复用 app.py 已经加载好的 DataFrame。原来这里独立 read_csv 一次，
     # 同一份 107k 行数据在进程里存了两份。
     if df is None:
-        df = pd.read_csv('vehicle.csv')
+        df = pd.read_csv('vehicle.csv.gz')
 
     # 创建多个图表
     brand_count = df['Brand'].value_counts().head(10)
