@@ -1,0 +1,28 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # 数据集 (vehicle.csv.gz) 和模型 (model/price_model.pkl) 都在仓库里，
+      # 所以 CI 不需要训练步骤 —— 这正是把模型从 874MB 压到 1.6MB 的收益之一。
+      - name: Run tests
+        env:
+          # 显式清空：测试必须跑在规则模式下，绝不打真实 API
+          ANTHROPIC_API_KEY: ""
+        run: pytest tests/ -q

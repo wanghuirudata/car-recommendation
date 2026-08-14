@@ -10,6 +10,8 @@ pinned: false
 
 # UK Used Car Price Prediction & Recommendation
 
+[![tests](https://github.com/wanghuirudata/car-recommendation/actions/workflows/tests.yml/badge.svg)](https://github.com/wanghuirudata/car-recommendation/actions/workflows/tests.yml)
+
 A Flask application over **107,343 UK used-car listings** that does three things:
 predicts a fair price for a given spec, recommends comparable vehicles, and
 exposes the market data through an interactive BI dashboard.
@@ -268,7 +270,43 @@ Configuration is via environment variables — all optional for local use:
 
 ---
 
-## Deployment
+## Tests
+
+```bash
+pip install -r requirements-dev.txt && pytest tests/ -q
+```
+
+58 tests, ~6 seconds. They run in the assistant's rule-based mode — `conftest.py`
+strips `ANTHROPIC_API_KEY`, so the suite never calls a paid API and never depends
+on the network. CI runs on every push; the dataset and the 1.6 MB model are both
+committed, so there is no training step in the pipeline.
+
+Almost every test corresponds to a defect that actually occurred, rather than to
+a coverage target: regex metacharacters in the search box, an empty result set,
+an out-of-range vehicle id, string columns poisoning the similarity matrix, the
+three distinct fallback causes.
+
+**The suite was checked by breaking the code on purpose.** A passing test says
+nothing until you know it can fail, so seven previously-fixed bugs were
+reintroduced one at a time to see whether the tests noticed:
+
+| Reintroduced defect | Caught |
+|---|---|
+| `price` back into the similarity features | ✅ |
+| Price band widened to no-op | ✅ * |
+| Implausible-year filter removed | ✅ |
+| Search sorted by price ascending again | ✅ |
+| Exact-duplicate listings no longer deduplicated | ✅ * |
+| Seed vehicle no longer excluded from its own recommendations | ✅ |
+| `float32` cast on the feature matrix dropped | ✅ |
+
+\* Caught only after the test was fixed. The first pass missed two of the seven,
+and both misses were instructive. The price-band test passed `price_band=0.4`
+explicitly, so it verified the parameter worked while ignoring the default —
+which is the value the application actually runs on. The de-duplication test used
+a query whose results happened to contain no duplicates, so it could not fail.
+Neither gap was visible from reading the tests; only breaking the code exposed
+them.
 
 The image is platform-neutral: it reads `$PORT`, defaults to 7860, and serves
 through waitress. It also **retrains the model during the build** rather than
