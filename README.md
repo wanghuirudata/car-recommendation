@@ -49,6 +49,48 @@ request does no disk I/O and no preprocessing.
 
 ---
 
+## The data
+
+107,343 listings, nine brands, 192 distinct models. Figures are in `graphic/`,
+produced by `model/car-uk.ipynb`.
+
+**The target is right-skewed, and the raw data was capped.** Price runs
+£450–£50,000 with a median of £14,500 and a skew of **1.15**. The pre-cleaning
+distribution (`graphic/target0.PNG`) ran to £160,000 with a long thin tail; the
+working dataset (`graphic/target1.PNG`) is capped at £50,000. `log1p` pulls the
+skew to **−0.31**, which is what makes the log-space fit reasonable rather than
+merely convenient.
+
+Prices are concentrated in the middle: 65% of listings fall between £7,500 and
+£20,000, and only 7% exceed £30,000. That thin top band is exactly where the
+error analysis later found the model weakest — there is little to learn from.
+
+**Correlations with price** (`graphic/heatmap.PNG`):
+
+| Feature | r |
+|---|---|
+| `engineSize` | +0.58 |
+| `year` | +0.53 |
+| `mileage` | −0.45 |
+| `tax` | +0.33 |
+| `mpg` | −0.27 |
+
+`year` and `mileage` correlate at **−0.74** — older cars have covered more
+ground. For a linear model that collinearity would need handling; gradient
+boosting splits on whichever is more useful at each node, so it is left alone.
+
+**One feature is redundant.** `High_Performance` and `Car_Type == 'Performance'`
+agree on **99.9%** of rows (φ = 0.91): 326 rows versus 375. The heatmap shows it
+as the one bright off-diagonal cell. The model confirms it — `High_Performance`
+carries **0.1%** of LightGBM's gain, the lowest of any feature. It is kept
+because removing it changes nothing measurable, but it is not doing work.
+
+**Missing data:** `tax` and `mpg` are absent for the same 9,306 rows (8.7%),
+median-imputed inside the pipeline so the imputation is fitted on training folds
+only.
+
+---
+
 ## Price model
 
 `price` is right-skewed (£450–£50,000, skew 1.15), so the target is fit in
