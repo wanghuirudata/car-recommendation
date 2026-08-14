@@ -13,15 +13,58 @@ from model.regressor import (CATEGORICAL_FEATURES, FEATURE_COLUMNS,
 SPEC = {
     "year": 2017, "mileage": 15944, "tax": 150.0, "mpg": 57.7,
     "engineSize": 1.0, "transmission": "Automatic", "fuelType": "Petrol",
-    "Brand": "Ford", "Car_Type": "Hatchback", "High_Performance": 0,
+    "Brand": "Ford", "Car_Type": "Hatchback", "model": "Fiesta",
+    "High_Performance": 0,
 }
 
 
 def test_feature_columns_are_explicit():
-    """显式列表是防线：CSV 后来新增的展示列不能悄悄流进模型。"""
+    """显式列表是防线：CSV 后来新增的展示列不能悄悄流进模型。
+
+    注意 model 是特征、image_url 不是 —— 两列同一天为了页面显示被加进 CSV，
+    但只有前者对价格有解释力。当初的白名单把两者一起挡在了外面。
+    """
     assert FEATURE_COLUMNS == NUMERIC_FEATURES + CATEGORICAL_FEATURES + PASSTHROUGH_FEATURES
-    for leaked in ("price", "vehicle_id", "model", "image_url"):
+    assert "model" in FEATURE_COLUMNS
+    for leaked in ("price", "vehicle_id", "image_url"):
         assert leaked not in FEATURE_COLUMNS
+
+
+def test_model_name_whitespace_is_normalised():
+    """CSV 里是 ' Fiesta'（带前导空格），表单传的是 'Fiesta'。
+
+    两侧必须用同一套清洗，否则服务端的值会被 OneHotEncoder 当作未知类别
+    静默丢弃——不报错，只是悄悄退回到没有这个特征的水平。
+    """
+    from model.regressor import normalise
+    padded = pd.DataFrame([dict(SPEC, model=" Fiesta ")])
+    assert normalise(padded)["model"].iloc[0] == "Fiesta"
+    assert Model.car_price(padded) == Model.car_price(pd.DataFrame([SPEC]))
+
+
+def test_model_name_carries_real_weight():
+    """model 若没被模型用上，加这一列就没有意义。
+
+    这里断言特征重要性而不是'换个车型名预测就该变'：把 engineSize、
+    fuelType、Car_Type 固定住只换名字，等于在问'1.0L 汽油两厢的 BMW i8
+    值多少钱'——这车不存在，树会先按数值特征分裂，路径上根本走不到车型。
+    第一版测试就是这么写的，失败的是测试不是模型。
+    """
+    from model.regressor import get_model
+    pipeline = get_model()
+    names = pipeline.named_steps["preprocessor"].get_feature_names_out()
+    importance = pipeline.named_steps["regressor"].regressor_.feature_importances_
+    share = sum(v for n, v in zip(names, importance) if "__model_" in n) / importance.sum()
+    assert share > 0.05, f"model 特征组只占 {share:.1%}，可能没有真正生效"
+
+
+def test_distinguishes_trim_levels_on_real_specs():
+    """同品牌下，用数据里真实存在的两台车对比：贵的那台应当预测更贵。"""
+    frame = pd.read_csv("vehicle.csv.gz")
+    frame["model"] = frame["model"].astype(str).str.strip()
+    cheap = frame[(frame.Brand == "BMW") & (frame.model == "1 Series")].iloc[[0]]
+    dear = frame[(frame.Brand == "BMW") & (frame.model == "i8")].iloc[[0]]
+    assert Model.car_price(dear) > Model.car_price(cheap) * 1.5
 
 
 def test_prediction_is_plausible():
@@ -36,8 +79,8 @@ def test_prediction_is_deterministic():
 
 
 def test_extra_columns_are_ignored():
-    """purchase 表单之外多传字段不应影响结果——car_price 按列名取子集。"""
-    noisy = dict(SPEC, vehicle_id=123, model=" Fiesta", image_url="/x.jpg")
+    """多传非特征字段不应影响结果——car_price 按 FEATURE_COLUMNS 取子集。"""
+    noisy = dict(SPEC, vehicle_id=123, image_url="/x.jpg", price=99999)
     assert Model.car_price(pd.DataFrame([noisy])) == Model.car_price(pd.DataFrame([SPEC]))
 
 

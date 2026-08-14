@@ -50,7 +50,8 @@ def test_price_prediction_form(client):
     response = client.post("/purchase", data={
         "year": 2017, "transmission": "Automatic", "mileage": 15944,
         "fuelType": "Petrol", "tax": 150, "mpg": 57.7, "engineSize": 1.0,
-        "Brand": "Ford", "Car_Type": "Hatchback", "High_Performance": 0,
+        "Brand": "Ford", "Car_Type": "Hatchback", "model": "Fiesta",
+        "High_Performance": 0,
     })
     assert response.status_code == 200
     assert b"\xc2\xa3" in response.data  # 页面上出现了 £

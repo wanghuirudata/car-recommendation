@@ -16,7 +16,7 @@ A Flask application over **107,343 UK used-car listings** that does three things
 predicts a fair price for a given spec, recommends comparable vehicles, and
 exposes the market data through an interactive BI dashboard.
 
-**Held-out accuracy: MAE £1,164 / MAPE 7.2% / R² 0.956** on a 20% test split.
+**Held-out accuracy: MAE £1,068 / MAPE 6.7% / R² 0.963** on a 20% test split.
 
 ---
 
@@ -62,23 +62,76 @@ Reproduce with `python train_model.py --benchmark`:
 
 | Model | MAE | MAPE | RMSE | R² | fit |
 |---|---|---|---|---|---|
-| Baseline (predict median) | £6,361 | 46.4% | £8,582 | −0.053 | 0.1s |
-| Ridge regression | £2,530 | 17.8% | £3,502 | 0.825 | 0.2s |
-| RandomForest (100 trees, unbounded) | £1,189 | 7.7% | £1,819 | 0.953 | 6.4s |
-| LightGBM (raw target) | £1,153 | **7.4%** | **£1,700** | **0.959** | 2.2s |
-| **LightGBM + log1p target** ← shipped | **£1,164** | **7.2%** | £1,745 | 0.956 | 2.3s |
+| Baseline (predict median) | £6,361 | 46.4% | £8,582 | −0.053 | 0.2s |
+| Ridge regression | £2,041 | 14.4% | £2,853 | 0.884 | 0.4s |
+| RandomForest (100 trees, unbounded) | £1,103 | 7.1% | £1,691 | 0.959 | 21.6s |
+| LightGBM (raw target) | £1,070 | 6.9% | **£1,565** | **0.965** | 1.9s |
+| **LightGBM + log1p target** ← shipped | **£1,068** | **6.7%** | £1,601 | 0.963 | 1.9s |
 
 **On the trade-off:** raw-target LightGBM wins on MAE/RMSE/R²; the log-target
 version wins on MAPE. Since relative error is the metric users actually feel,
-the log version ships — and the cost of that choice (£11 of MAE, 0.003 of R²)
+the log version ships — and the cost of that choice (£2 of MAE, 0.002 of R²)
 is stated rather than hidden.
 
 Replacing RandomForest also shrank the artefact from **874 MB to 1.6 MB (546×)**,
 which is what makes the model committable to git and deployable on a free tier
 at all.
 
-Top drivers (LightGBM gain): `mpg` 24.8%, `mileage` 17.3%, `year` 13.0%,
-`engineSize` 11.5%, `tax` 7.3% — the rest is brand/body/fuel one-hots.
+Top drivers (LightGBM gain): **`model` name 22.9%**, `mpg` 19.0%, `mileage`
+16.1%, `year` 12.2%, `engineSize` 8.7%, `Brand` 6.2%. The model name being the
+single strongest signal is the point of the next section.
+
+### Error analysis — and the feature it found
+
+`python analysis/error_analysis.py` breaks the held-out errors down instead of
+reporting one number. It **retrains on the 80% split** rather than loading the
+shipped pickle: that model is fitted on all rows, because serving should use
+every row, so scoring it against the "held-out" set leaks. The first version of
+the script did exactly that and reported an optimistic 6.7% against a true 7.2%.
+
+Where the model was weak (at MAE £1,164 / MAPE 7.2%, bias −0.1%):
+
+| Segment | MAPE | Within 10% |
+|---|---|---|
+| Cars over 10 years old | **22.3%** | 34% |
+| Mileage 60–100k | 10.1% | 62% |
+| Under £7,500 | 10.0% | 64% |
+| BMW / Audi / Mercedes | 7.6–7.9% | ~72% |
+| Toyota | 6.4% | 79% |
+
+Bias was ≈0 everywhere, so the model was well calibrated but imprecise at the
+edges. The largest errors told a sharper story — nearly all were severe
+*under*-predictions of expensive cars:
+
+| Car | Actual | Predicted |
+|---|---|---|
+| BMW **i8** (1.5 L hybrid supercar) | £48,898 | £24,380 |
+| Audi **R8** | £47,995 | £27,348 |
+| VW **Caravelle** | £43,990 | £22,481 |
+
+One cause: the feature set had `Brand`, `Car_Type` and `engineSize` but **not the
+model name**, so an i8 and a 1 Series were indistinguishable. Within a single
+(Brand, Car_Type, engineSize) group, prices span up to **£48,645**.
+
+The column was in the data the whole time. It was added in Nov 2024 so listings
+could show a car's name, and the fix that made `FEATURE_COLUMNS` an explicit
+whitelist — written to keep `image_url`, added the same day, out of training —
+locked it out along with it. A correct fix that created a blind spot; only
+measurement found it.
+
+`python analysis/feature_experiment.py` tests the change on the same split:
+
+| | MAE | MAPE | R² | Within 10% | Off by >30% |
+|---|---|---|---|---|---|
+| Without model name | £1,164 | 7.2% | 0.956 | 74.9% | 0.9% |
+| **With model name** | **£1,068** | **6.7%** | **0.963** | **78.5%** | **0.6%** |
+
+An 8.2% MAE reduction and a third fewer catastrophic errors, from a column that
+was already sitting in the CSV.
+
+**It does not fix everything.** The i8 is still under-predicted at ~£30,000
+against a ~£48,900 market price: there are six of them in 107,343 rows. That is a
+data-volume limit, not a modelling one, and no feature will fix it.
 
 ---
 

@@ -31,10 +31,32 @@ MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "price_mod
 # 建模用的列。显式列出，避免 CSV 里的 vehicle_id / model / image_url
 # 被 remainder='passthrough' 混进特征里。
 NUMERIC_FEATURES = ['year', 'mileage', 'tax', 'mpg', 'engineSize']
-CATEGORICAL_FEATURES = ['transmission', 'fuelType', 'Brand', 'Car_Type']
+# 'model' 是具体车型名（192 个取值）。它长期不在特征里 —— 该列 2024/11 才为了
+# 在页面上显示车名加进 CSV，而当初把特征改成显式白名单，正是为了把同批加进来的
+# image_url 挡在外面（字符串列会让训练直接报错）。那个修复是对的，但顺手也把
+# model 锁在了门外。
+#
+# 误差分析发现最大的几个误差都源于此：BMW i8（1.5L 混动超跑，£48,898）被预测成
+# £24,380，因为 Brand+Car_Type+engineSize 无法区分它和 1 系 —— 同一组合内价格
+# 最大能差 £48,645。加上这一列后 MAE 降 8.2%，>30% 的离谱误差少了三分之一。
+# 复现见 analysis/feature_experiment.py。
+CATEGORICAL_FEATURES = ['transmission', 'fuelType', 'Brand', 'Car_Type', 'model']
 PASSTHROUGH_FEATURES = ['High_Performance']
 FEATURE_COLUMNS = NUMERIC_FEATURES + CATEGORICAL_FEATURES + PASSTHROUGH_FEATURES
 TARGET = 'price'
+
+
+def normalise(frame):
+    """训练和推理共用的清洗。
+
+    CSV 里的 model 值带前导空格（' Fiesta'）。两侧必须用同一套处理，
+    否则服务端传 'Fiesta' 会匹配不上训练时的 ' Fiesta'，被 OneHotEncoder
+    当成未知类别静默丢弃 —— 不报错，只是悄悄变差。
+    """
+    frame = frame.copy()
+    if 'model' in frame.columns:
+        frame['model'] = frame['model'].astype(str).str.strip()
+    return frame
 
 _model = None
 _model_lock = threading.Lock()
@@ -112,6 +134,7 @@ class Model:
             raise ValueError(f"Training data is missing columns: {missing}")
 
         model = model if model is not None else build_model()
+        data = normalise(data)
         model.fit(data[FEATURE_COLUMNS], data[TARGET])
         joblib.dump(model, path, compress=3)
 
@@ -126,7 +149,7 @@ class Model:
             if missing:
                 raise ValueError(f"Input is missing columns: {missing}")
 
-            prediction = get_model().predict(input_data[FEATURE_COLUMNS])
+            prediction = get_model().predict(normalise(input_data)[FEATURE_COLUMNS])
             return float(prediction[0])
         except Exception as e:
             print(f"Error in prediction: {e}")

@@ -83,7 +83,7 @@
         }
     </style>
 </head>
-<body>
+<body data-selected-model="{{ submitted.model if submitted else '' }}">
     <div class="form-container">
         <h2>Car Prediction Form</h2>
         <form method="POST">
@@ -116,48 +116,50 @@
                         <option value="0">No</option>
                     </select>
                 </div>
+                {# 下面几个下拉的选项全部来自数据集本身（见 app.py 的
+                   _purchase_form_options）。之前是硬编码的，已经和数据脱节：
+                   列了 Nissan（数据里没有），Car_Type 只列了 3 种（实际 7 种）。
+                   选到不存在的组合时 OneHotEncoder 会静默忽略，估价照出但没依据。 #}
                 <div>
                     <label for="Brand">Brand:</label>
                     <select name="Brand" id="Brand" required>
                         <option selected value>-- select an option --</option>
-                        <option value="Toyota">Toyota</option>
-                        <option value="Ford">Ford</option>
-                        <option value="Skoda">Skoda</option>
-                        <option value="BMW">BMW</option>
-                        <option value="Mercedes-Benz">Mercedes-Benz</option>
-                        <option value="Audi">Audi</option>
-                        <option value="Volkswagen">Volkswagen</option>
-                        <option value="Vauxhall-Opel">Vauxhall-Opel</option>
-                        <option value="Nissan">Nissan</option>
-                        <option value="Hyundai">Hyundai</option>
-                        <!-- More options can be added here -->
+                        {% for brand in brands %}
+                        <option value="{{ brand }}" {% if submitted and submitted.Brand == brand %}selected{% endif %}>{{ brand }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="model">Model:</label>
+                    <select name="model" id="model" required disabled>
+                        <option selected value>-- select a brand first --</option>
                     </select>
                 </div>
                 <div>
                     <label for="fuelType">Fuel Type:</label>
                     <select name="fuelType" id="fuelType" required>
                         <option selected value>-- select an option --</option>
-                        <option value="Petrol">Petrol</option>
-                        <option value="Diesel">Diesel</option>
-                        <option value="Electric">Electric</option>
-                        <option value="Hybrid">Hybrid</option>
+                        {% for fuel in fuel_types %}
+                        <option value="{{ fuel }}" {% if submitted and submitted.fuelType == fuel %}selected{% endif %}>{{ fuel }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div>
                     <label for="Car_Type">Car Type:</label>
                     <select name="Car_Type" id="Car_Type" required>
                         <option selected value>-- select an option --</option>
-                        <option value="SUV">SUV</option>
-                        <option value="Sedan">Sedan</option>
-                        <option value="Hatchback">Hatchback</option>
+                        {% for car_type in car_types %}
+                        <option value="{{ car_type }}" {% if submitted and submitted.Car_Type == car_type %}selected{% endif %}>{{ car_type }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div>
                     <label for="transmission">Transmission:</label>
                     <select name="transmission" id="transmission" required>
                         <option selected value>-- select an option --</option>
-                        <option value="Manual">Manual</option>
-                        <option value="Automatic">Automatic</option>
+                        {% for tx in transmissions %}
+                        <option value="{{ tx }}" {% if submitted and submitted.transmission == tx %}selected{% endif %}>{{ tx }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
@@ -173,5 +175,38 @@
             </div>
         </div>
     </div>
+
+    {# 车型下拉随品牌联动。数据以 JSON 注入，避免为一次选择再往返服务端。 #}
+    <script id="models-by-brand" type="application/json">{{ models_by_brand | tojson }}</script>
+    {% raw %}
+    <script>
+    (function () {
+      const byBrand = JSON.parse(document.getElementById('models-by-brand').textContent);
+      const brandSelect = document.getElementById('Brand');
+      const modelSelect = document.getElementById('model');
+      const preselected = document.body.dataset.selectedModel || '';
+
+      function refreshModels() {
+        const models = byBrand[brandSelect.value] || [];
+        modelSelect.innerHTML = '';
+        if (!models.length) {
+          modelSelect.disabled = true;
+          modelSelect.appendChild(new Option('-- select a brand first --', ''));
+          return;
+        }
+        modelSelect.disabled = false;
+        modelSelect.appendChild(new Option('-- select a model --', ''));
+        models.forEach(m => {
+          const opt = new Option(m, m);
+          if (m === preselected) opt.selected = true;
+          modelSelect.appendChild(opt);
+        });
+      }
+
+      brandSelect.addEventListener('change', refreshModels);
+      refreshModels();   // 提交后回填时也要重建一次
+    })();
+    </script>
+    {% endraw %}
 </body>
 </html>

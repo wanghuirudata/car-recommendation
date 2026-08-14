@@ -268,46 +268,54 @@ def vehicle_detail(vehicle_id):
 
 
 
+def _purchase_form_options():
+    """表单选项由数据本身决定，不写死。
+
+    原来的下拉是硬编码的，已经和数据脱节：列了 Nissan（数据集里没有），
+    Car_Type 只列了 3 种（实际有 7 种）。选到数据里不存在的组合，
+    OneHotEncoder 会当成未知类别静默忽略，估价照样出数但没有依据。
+    """
+    models_by_brand = (
+        data.assign(model=data['model'].astype(str).str.strip())
+            .groupby('Brand', observed=True)['model']
+            .apply(lambda s: sorted(s.unique()))
+            .to_dict()
+    )
+    return {
+        'brands': sorted(models_by_brand),
+        'models_by_brand': {str(k): v for k, v in models_by_brand.items()},
+        'car_types': sorted(data['Car_Type'].astype(str).unique()),
+        'fuel_types': sorted(data['fuelType'].astype(str).unique()),
+        'transmissions': sorted(data['transmission'].astype(str).unique()),
+    }
+
+
 @app.route("/purchase", methods=["GET", "POST"])
 def purchase():
+    options = _purchase_form_options()
+
     if request.method == "POST":
-        data = {}
+        # 变量名沿用表单字段名（含 Brand / Car_Type 的大写），
+        # 这样和 FEATURE_COLUMNS 一一对应，少一层心智映射
+        spec = {
+            'year': int(request.form["year"]),
+            'transmission': request.form["transmission"],
+            'mileage': int(request.form["mileage"]),
+            'fuelType': request.form["fuelType"],
+            'tax': float(request.form["tax"]),
+            'mpg': float(request.form["mpg"]),
+            'engineSize': float(request.form["engineSize"]),
+            'Brand': request.form["Brand"],
+            'Car_Type': request.form["Car_Type"],
+            'model': request.form.get("model", "").strip(),
+            'High_Performance': int(request.form["High_Performance"]),
+        }
 
-        # Retrieve form data
-        year = int(request.form["year"])
-        transmission = request.form["transmission"]
-        mileage =  int(request.form["mileage"])
-        fuelType =  request.form["fuelType"]
-        tax =  float(request.form["tax"])
-        mpg = float(request.form["mpg"]) 
-        engineSize = float(request.form["engineSize"]) 
-        Brand = request.form["Brand"]
-        Car_Type = request.form["Car_Type"]
-        High_Performance = int(request.form["High_Performance"]) 
- 
+        predicted_price = Model.car_price(pd.DataFrame(spec, index=[0]))
+        return render_template("purchase.html", predicted_price=predicted_price,
+                               submitted=spec, **options)
 
-        data = {'year':year, 
-                'transmission': transmission, 
-                'mileage' :mileage, 
-                'fuelType' :fuelType,
-                'tax' :tax, 
-                'mpg' :mpg, 
-                'engineSize' :engineSize,
-                'Brand' :Brand, 
-                'Car_Type' :Car_Type, 
-                'High_Performance' :High_Performance,
-                }
-        
-        df = pd.DataFrame(data, index=[0])
-        # Log the input for debugging
-        # print(customer_age, dependent_count, education_level, income_category, "ce sont mes data")
-
-        # Pass all the inputs to your prediction function
-        predicted_price = Model.car_price(df)
-
-        return render_template("purchase.html", predicted_price=predicted_price)
-    else:
-        return render_template("purchase.html")
+    return render_template("purchase.html", **options)
 
 
 

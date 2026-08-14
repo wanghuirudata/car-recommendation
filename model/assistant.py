@@ -78,7 +78,9 @@ TOOLS = [
     },
     {
         "name": "estimate_price",
-        "description": "估算一辆车的市场价。year、mileage、Brand、Car_Type 必填。",
+        "description": ("估算一辆车的市场价。year、mileage、Brand、Car_Type 必填。"
+                        "尽量同时给出 model（具体车型名，如 Fiesta、i8、3 Series）—— "
+                        "它对准确度影响很大：同品牌同排量下，1 系和 i8 差几万英镑。"),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -86,6 +88,8 @@ TOOLS = [
                 "mileage": {"type": "integer"},
                 "Brand": {"type": "string"},
                 "Car_Type": {"type": "string"},
+                "model": {"type": "string",
+                          "description": "具体车型名，如 Fiesta / i8 / 3 Series。强烈建议提供。"},
                 "transmission": {"type": "string", "description": "默认 Manual"},
                 "fuelType": {"type": "string", "description": "默认 Petrol"},
                 "engineSize": {"type": "number", "description": "排量，默认 1.6"},
@@ -118,6 +122,12 @@ class VehicleAssistant:
         self._defaults = {
             'mpg': float(pd.to_numeric(data['mpg'], errors='coerce').median()),
             'tax': float(pd.to_numeric(data['tax'], errors='coerce').median()),
+        }
+        # 每个品牌下的车型，按挂牌数量降序 —— 未指定车型时取第一个作为默认
+        self._normalised = data.assign(model=data['model'].astype(str).str.strip())
+        self._models_by_brand = {
+            str(brand): group['model'].value_counts().index.tolist()
+            for brand, group in self._normalised.groupby('Brand', observed=True)
         }
 
     # ---------- 能力判定 ----------
@@ -170,24 +180,89 @@ class VehicleAssistant:
             'sorted_by': 'newest first, then lowest mileage',
         }
 
-    def estimate_price(self, year, mileage, Brand, Car_Type, transmission='Manual',
-                       fuelType='Petrol', engineSize=1.6, mpg=None, tax=None):
+    def estimate_price(self, year, mileage, Brand, Car_Type, model=None,
+                       transmission=None, fuelType=None, engineSize=None,
+                       mpg=None, tax=None):
+        # 没给车型名时退到该品牌下最常见的车型。总比传空值好 ——
+        # 空值会被 OneHotEncoder 当未知类别丢掉，等于回到没有这个特征的状态。
+        resolved_model, assumed = self._resolve_model(Brand, model)
+
+        # 未指定的规格从**这款车的真实数据**里取，不用全局默认。
+        # 用全局默认（Manual / Petrol / 1.6L）会拼出不存在的车：BMW i8 是
+        # 1.5L 混动自动挡，按 1.6L 汽油手动去问，模型会顺着数值特征分裂到
+        # 一台普通 1 系上——实测估出 £12,313，而真实挂牌价约 £48,900。
+        spec_defaults = self._spec_defaults(Brand, resolved_model)
+
         row = {
             'year': year, 'mileage': mileage, 'Brand': Brand, 'Car_Type': Car_Type,
-            'transmission': transmission, 'fuelType': fuelType,
-            'engineSize': engineSize,
-            'mpg': self._defaults['mpg'] if mpg is None else mpg,
-            'tax': self._defaults['tax'] if tax is None else tax,
-            'High_Performance': 0,
+            'model': resolved_model,
+            'transmission': transmission or spec_defaults['transmission'],
+            'fuelType': fuelType or spec_defaults['fuelType'],
+            'engineSize': spec_defaults['engineSize'] if engineSize is None else engineSize,
+            'mpg': spec_defaults['mpg'] if mpg is None else mpg,
+            'tax': spec_defaults['tax'] if tax is None else tax,
+            'High_Performance': spec_defaults['High_Performance'],
         }
         predicted = Model.car_price(pd.DataFrame([row])[FEATURE_COLUMNS])
         if predicted is None:
             return {'error': 'prediction failed'}
-        return {
+
+        result = {
             'estimated_price': round(predicted),
-            'note': 'LightGBM model, held-out MAPE 7.2%',
-            'spec': {'year': year, 'mileage': mileage, 'Brand': Brand, 'Car_Type': Car_Type},
+            'note': 'LightGBM model, held-out MAPE 6.7%',
+            'spec': {'year': year, 'mileage': mileage, 'Brand': Brand,
+                     'Car_Type': Car_Type, 'model': resolved_model},
         }
+        if assumed:
+            result['warning'] = (
+                f"未指定车型，已按 {Brand} 最常见的 {resolved_model} 估算；"
+                f"车型对价格影响很大，请向用户确认具体车型。")
+        return result
+
+    def _spec_defaults(self, brand, model):
+        """这款车在数据里最典型的规格：类别取众数，数值取中位数。
+
+        逐级回退：Brand+model -> Brand -> 全数据集。
+        """
+        frame = self._normalised
+        for mask in (
+            (frame['Brand'].astype(str) == str(brand)) & (frame['model'] == model),
+            (frame['Brand'].astype(str) == str(brand)),
+        ):
+            subset = frame[mask]
+            if len(subset) >= 3:
+                break
+        else:
+            subset = frame
+
+        def mode_of(column, fallback):
+            values = subset[column].mode()
+            return str(values.iloc[0]) if len(values) else fallback
+
+        return {
+            'transmission': mode_of('transmission', 'Manual'),
+            'fuelType': mode_of('fuelType', 'Petrol'),
+            'engineSize': float(pd.to_numeric(subset['engineSize'], errors='coerce').median()),
+            'mpg': float(pd.to_numeric(subset['mpg'], errors='coerce').median()),
+            'tax': float(pd.to_numeric(subset['tax'], errors='coerce').median()),
+            'High_Performance': int(pd.to_numeric(
+                subset['High_Performance'], errors='coerce').median()),
+        }
+
+    def _resolve_model(self, brand, requested):
+        """把用户说的车型名对到数据集里的取值。返回 (车型名, 是否为推断值)。"""
+        available = self._models_by_brand.get(str(brand), [])
+        if not available:
+            return (str(requested).strip() if requested else 'unknown'), False
+        if requested:
+            wanted = str(requested).strip().lower()
+            for name in available:
+                if name.lower() == wanted:
+                    return name, False
+            for name in available:               # 宽松匹配："3 series" -> "3 Series"
+                if wanted in name.lower() or name.lower() in wanted:
+                    return name, False
+        return available[0], True                # available 按挂牌数量降序
 
     def find_alternatives(self, vehicle_id, cheaper=False):
         if vehicle_id not in self.data.index:
