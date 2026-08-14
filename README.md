@@ -40,7 +40,7 @@ flowchart LR
     F --> P[regressor.py<br/>LightGBM + log1p<br/>loaded once per process]
     F --> D[dashboard.py<br/>Plotly Dash at /dashapp/]
     R --> C[(vehicle.csv.gz)]
-    P --> M[(price_model.pkl<br/>1.6 MB)]
+    P --> M[(price_model.pkl 1.6MB<br/>+ interval models 3.2MB)]
     D --> C
 ```
 
@@ -132,6 +132,47 @@ was already sitting in the CSV.
 **It does not fix everything.** The i8 is still under-predicted at ~£30,000
 against a ~£48,900 market price: there are six of them in 107,343 rows. That is a
 data-volume limit, not a modelling one, and no feature will fix it.
+
+### Prediction intervals
+
+A bare point estimate claims a confidence the model does not have. Every
+estimate now ships with a range, from two extra LightGBM models fitted with the
+**pinball loss** at the low and high quantiles. The target stays log-transformed:
+quantiles are invariant under a monotonic transform, so `expm1` of the log-space
+q90 *is* the price-space q90 — exact, not an approximation.
+
+**Nominal coverage is not measured coverage.** Quantile regression carries no
+calibration guarantee, and this model under-covers by a consistent ~4 points:
+
+| Nominal | Measured | Median width |
+|---|---|---|
+| 80% | 76.3% | £2,727 |
+| **85%** ← used | **81.3%** | £3,123 |
+| 90% | 86.4% | £3,642 |
+| 95% | 92.1% | £4,560 |
+
+So the shipped "80% interval" is built from the **85%** quantile pair, which
+measures 81.3% on held-out data. Reproduce with
+`python analysis/prediction_intervals.py`.
+
+**The width is itself the signal.** It ranges from 13% of the estimate at the
+narrowest decile to 29% at the widest, and tracks exactly the segments the error
+analysis flagged:
+
+| | Point estimate | Interval | Relative width |
+|---|---|---|---|
+| 2018 Ford Fiesta, 30k miles | £11,224 | £9,872–£12,396 | 22% |
+| 2017 BMW i8, 36k miles | £28,772 | £15,434–£29,190 | **48%** |
+| Cars over 10 years old | — | — | **52%** |
+
+The i8 is the case the point estimate gets wrong, and the interval is the model
+saying so. The assistant surfaces this in words — asked about the i8 it replies
+that "the wide range reflects that the i8 is a specialist hybrid sports car with
+relatively few comparable sales in the dataset."
+
+If the interval models are missing, `car_price_interval` returns the point
+estimate with `None` bounds rather than failing — the same degrade-don't-die
+rule the assistant follows.
 
 ---
 

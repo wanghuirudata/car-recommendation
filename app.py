@@ -311,8 +311,10 @@ def purchase():
             'High_Performance': int(request.form["High_Performance"]),
         }
 
-        predicted_price = Model.car_price(pd.DataFrame(spec, index=[0]))
+        low, predicted_price, high = Model.car_price_interval(
+            pd.DataFrame(spec, index=[0]))
         return render_template("purchase.html", predicted_price=predicted_price,
+                               price_low=low, price_high=high,
                                submitted=spec, **options)
 
     return render_template("purchase.html", **options)

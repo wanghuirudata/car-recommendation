@@ -53,7 +53,9 @@ SYSTEM_PROMPT = """你是英国二手车网站的购车助手，背后有 107,34
 规则：
 - 涉及具体车辆、价格、库存的问题，必须调用工具，不要凭空回答
 - 报价格时带上英镑符号和千分位
-- 提到估价时说明这是模型预测，平均误差约 7%
+- 估价一定要连同 likely_range 一起给出，例如「约 £30,000，大概率在
+  £24,000–£38,000 之间」。只给点估计会让用户以为模型比实际更确定。
+  区间很宽时说明这类车数据少、把握不大
 - 回答简短，中文或英文跟随用户提问的语言
 - 数据集里没有的信息（保险、贷款、保养记录）如实说明不掌握
 """
@@ -203,7 +205,8 @@ class VehicleAssistant:
             'tax': spec_defaults['tax'] if tax is None else tax,
             'High_Performance': spec_defaults['High_Performance'],
         }
-        predicted = Model.car_price(pd.DataFrame([row])[FEATURE_COLUMNS])
+        low, predicted, high = Model.car_price_interval(
+            pd.DataFrame([row])[FEATURE_COLUMNS])
         if predicted is None:
             return {'error': 'prediction failed'}
 
@@ -213,6 +216,10 @@ class VehicleAssistant:
             'spec': {'year': year, 'mileage': mileage, 'Brand': Brand,
                      'Car_Type': Car_Type, 'model': resolved_model},
         }
+        if low is not None and high is not None:
+            result['likely_range'] = [round(low), round(high)]
+            result['range_note'] = ('80% interval, measured coverage 81.3%. '
+                                    'Report this range alongside the point estimate.')
         if assumed:
             result['warning'] = (
                 f"未指定车型，已按 {Brand} 最常见的 {resolved_model} 估算；"

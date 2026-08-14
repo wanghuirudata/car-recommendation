@@ -89,6 +89,37 @@ def test_missing_column_is_reported_not_crashed():
     assert Model.car_price(pd.DataFrame([incomplete])) is None
 
 
+def test_interval_brackets_the_point_estimate():
+    low, point, high = Model.car_price_interval(pd.DataFrame([SPEC]))
+    assert low is not None and high is not None
+    assert low <= point <= high
+
+
+def test_interval_is_wider_for_rare_cars():
+    """区间宽度要携带信息：数据少的车型应当明显更宽，否则区间只是装饰。"""
+    frame = pd.read_csv("vehicle.csv.gz")
+    frame["model"] = frame["model"].astype(str).str.strip()
+
+    def relative_width(brand, name):
+        row = frame[(frame.Brand == brand) & (frame.model == name)].iloc[[0]]
+        low, point, high = Model.car_price_interval(row)
+        return (high - low) / point
+
+    common = relative_width("Ford", "Fiesta")      # 数据集中数量最多的车型之一
+    rare = relative_width("BMW", "i8")             # 全数据集只有 6 台
+    assert rare > common
+
+
+def test_interval_degrades_gracefully(monkeypatch):
+    """区间模型缺失时只丢区间，点估计必须照常返回。"""
+    import model.regressor as regressor
+    monkeypatch.setattr(regressor, "_interval_models", None)
+    monkeypatch.setattr(regressor, "INTERVAL_MODEL_PATH", "/nonexistent.pkl")
+    low, point, high = Model.car_price_interval(pd.DataFrame([SPEC]))
+    assert low is None and high is None
+    assert point is not None
+
+
 def test_mileage_lowers_price():
     """基本单调性：同款车里程更高，估价应更低。"""
     low = Model.car_price(pd.DataFrame([dict(SPEC, mileage=10000)]))

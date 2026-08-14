@@ -22,8 +22,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.compose import TransformedTargetRegressor
 
-from model.regressor import (FEATURE_COLUMNS, MODEL_PATH, TARGET, Model,
-                             build_model, build_preprocessor)
+from model.regressor import (FEATURE_COLUMNS, INTERVAL_MODEL_PATH, MODEL_PATH,
+                             QUANTILE_LEVELS, TARGET, Model, build_model,
+                             build_preprocessor)
 
 DATA_PATH = 'vehicle.csv.gz'
 RANDOM_STATE = 42
@@ -111,6 +112,12 @@ def main():
     Model.train_and_save_model(data)
     size_mb = os.path.getsize(MODEL_PATH) / 1024 / 1024
     print(f"saved {MODEL_PATH} ({size_mb:.1f} MB)")
+
+    # 区间模型：名义 85% 的分位数，实测覆盖 81.3%
+    print(f"training interval models at quantiles {QUANTILE_LEVELS} ...")
+    Model.train_interval_models(data)
+    size_mb = os.path.getsize(INTERVAL_MODEL_PATH) / 1024 / 1024
+    print(f"saved {INTERVAL_MODEL_PATH} ({size_mb:.1f} MB)")
 
 
 if __name__ == '__main__':
