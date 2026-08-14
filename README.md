@@ -85,9 +85,55 @@ as the one bright off-diagonal cell. The model confirms it — `High_Performance
 carries **0.1%** of LightGBM's gain, the lowest of any feature. It is kept
 because removing it changes nothing measurable, but it is not doing work.
 
-**Missing data:** `tax` and `mpg` are absent for the same 9,306 rows (8.7%),
-median-imputed inside the pipeline so the imputation is fitted on training folds
-only.
+**Missing data is encoded two ways.** `tax` and `mpg` are absent for the same
+9,306 rows (8.7%) as `NaN`, median-imputed inside the pipeline so the imputation
+fits on training folds only. `engineSize` instead uses **0** as its missing
+marker — 285 rows (0.3%) — which the imputer does not catch, so those rows train
+on a physically impossible engine.
+
+### How much accuracy is left in these features?
+
+MAPE 6.7% raises the obvious question: is the model underfitting, or has it
+extracted what the recorded columns contain? That is answerable rather than a
+matter of opinion.
+
+If two listings are identical on **every recorded feature**, any model must give
+them the same prediction — so the spread in their actual prices is error no
+algorithm can remove. Grouping by all categorical features, `year`, `engineSize`
+and mileage to the nearest 5,000 gives 12,040 such groups covering **89% of the
+dataset**. `python analysis/noise_floor.py`:
+
+| | MAPE |
+|---|---|
+| Noise floor of the current features | **6.0%** |
+| What the model achieves | 6.7% |
+| **Headroom left in modelling** | **0.7 points** |
+
+**About 90% of the remaining error is not a modelling problem.** Better
+algorithms, more tuning, or a bigger ensemble can win at most ~0.7 points; the
+rest is variance the recorded columns cannot express.
+
+The extreme cases make it concrete. The widest group is six 2017 Ford Focus
+listings — identical fuel, transmission, engine size, body type and mileage —
+priced at £12,410, £12,790 and **£38,015**. A £38,000 Focus is a Focus RS; the
+data has no column that says so. Similar £23,000–£25,000 gaps appear inside
+single groups of BMW 1 Series, Mercedes A Class and BMW 4 Series.
+
+The floor also rises with price — 5.7% under £12,500, **7.6% above £30,000** —
+because expensive cars are where unrecorded specification varies most.
+
+**What would actually move the number**, roughly in order of expected value:
+
+| Missing feature | Why it matters here |
+|---|---|
+| **Trim / spec level** | The Focus RS case; the single largest unexplained gap |
+| **Condition & history** | Accident record, service history, MOT status, owner count |
+| **Optional extras** | Nav, leather, panoramic roof — thousands of pounds on premium brands |
+| **Listing date** | There is no date column at all, so market drift is invisible |
+| **Seller type & region** | Dealer vs private, and UK regional price variation |
+
+This reframes the roadmap: the next meaningful accuracy gain comes from
+**collecting different data**, not from a better model on this data.
 
 ---
 
