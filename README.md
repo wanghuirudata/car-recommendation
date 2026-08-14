@@ -52,6 +52,12 @@ Three paths follow from that:
 
 Everything below is about whether each of those actually works, and how well.
 
+**[Project presentation](https://prezi.com/p/9bmdq4kidgvo/)** (French) covers the
+same framing and the model comparison as originally delivered. Treat this README
+as the current record where the two differ: the accuracy figures here come from a
+later model, and the chatbot section explains why the assistant ended up on
+function calling rather than the retrieval design first sketched.
+
 ---
 
 ## What it does
