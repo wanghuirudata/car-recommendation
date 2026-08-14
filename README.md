@@ -20,6 +20,40 @@ exposes the market data through an interactive BI dashboard.
 
 ---
 
+## Why build this
+
+A used-car listing site has one job: get a buyer from "I need a car" to a
+specific listing they trust. Two things block that, and both are addressable
+with the data a dealer already has.
+
+**Buyers cannot tell whether a price is fair.** Every listing is a number with no
+context. A model trained on 107,343 comparable sales turns that into "£11,224,
+and cars like this trade between £9,872 and £12,396" — the range matters as much
+as the estimate, because it tells the buyer how much the number can be trusted.
+
+**Browsing does not converge.** Filters return thousands of rows sorted by one
+column. What moves a buyer forward is a short list of genuine alternatives: the
+same class of car from a different maker, or the same car for less money. Both
+recommendation tracks exist for that reason, and "at least 5% cheaper" is a
+concrete decision, not a similarity score.
+
+The commercial case for recommendation in retail is well established — it is a
+standard revenue lever at Amazon and Netflix — and it is far less developed in
+used-car marketplaces than in general e-commerce. That gap is the opportunity
+this project targets.
+
+Three paths follow from that:
+
+| User | Path |
+|---|---|
+| **Selling** | Enter a spec → a defensible price with an interval |
+| **Buying** | Search, compare, get alternatives, ask the assistant in plain language |
+| **Operator** | Dashboard over brand mix, price distribution and depreciation |
+
+Everything below is about whether each of those actually works, and how well.
+
+---
+
 ## What it does
 
 | Route | Feature |
@@ -317,9 +351,19 @@ The £296 median is the clearest symptom of the original design: the three
 paper — larger price deltas — which is the point. Recommending a genuinely
 different vehicle *should* move the price.
 
-At 107k rows an exact scan is the right call. An ANN index (hnswlib/faiss) only
-starts paying for itself around 10⁶+ rows, and would add a dependency and an
-index-rebuild step for no current gain.
+**The matrix that could not exist.** The original implementation built a full
+pairwise similarity matrix with dask. At 107,343 rows that is 107,343² entries —
+**86 GB** at `pairwise_distances`' float64 output, and the cast to `float32`
+happens *after* the allocation, so the peak is the full 86 GB either way. It also
+ranked by *distance* in descending order, which selects the least similar cars.
+Chunking and precomputing into a datastore were both considered; neither fixes
+the underlying arithmetic.
+
+A single query never needed the matrix. One row against the table is 107,343 × 30
+operations — **17.5 ms**, no precomputation, no storage. At this scale an exact
+scan is simply the right call; an ANN index (hnswlib/faiss) only starts paying
+for itself around 10⁶+ rows, and would add a dependency and an index-rebuild step
+for no current gain.
 
 ---
 
@@ -570,7 +614,7 @@ here because the fixes are the more interesting part of the work.
 | `/chatbot` called `request.post()`, which does not exist | Removed — the frontend uses Chatbase's browser embed and never hit the backend |
 | Empty search results crashed `np.random.choice` | Guarded; the recommendation block renders empty |
 | Regex metacharacters in the search box raised an exception | `str.contains(..., regex=False, na=False)` |
-| A 46 GB dask full-similarity matrix, ranked by *distance* in descending order (returning the least similar cars) | Deleted; single-vector scan replaces it |
+| An 86 GB dask full-similarity matrix, ranked by *distance* in descending order (returning the least similar cars) | Deleted; single-vector scan replaces it |
 | Dash referenced `styles.css`; the file is `style.css` | Corrected |
 | Hardcoded secret key and admin password | Moved to environment variables |
 
