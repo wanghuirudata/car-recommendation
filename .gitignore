@@ -30,3 +30,6 @@ Thumbs.db
 
 # Claude Code
 .claude/
+
+# 面试复习文档，本地保留，不入库
+INTERVIEW.md
